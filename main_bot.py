@@ -286,10 +286,9 @@ class PortalBot:
                 
                 self.logger.info(f"Batch {batch_index}/{total_batches} completed. Total progress: {success_count}/{len(all_tasks)}")
                 
-                # Krótka pauza między batchami (NIE zmiana IP!)
+                # Krótka pauza między batchami - 1s dla stabilności
                 if batch_num + batch_size < len(all_tasks):
-                    self.logger.info(f"Waiting 3s before next batch...")
-                    time.sleep(3)
+                    time.sleep(1)
             
             # Sesja zakończona
             session_success = success_count >= len(all_tasks) * 0.7  # 70% zadań musi się udać
@@ -357,6 +356,10 @@ class PortalBot:
                     if ip_change_success:
                         self.logger.info("✓ IP changed successfully!")
                         self.logger.info(f"New IP: {self.proxy_manager.current_ip}")
+                        
+                        # Pauza 30s (IP już się zmienił, wystarczy krótsza pauza)
+                        self.logger.info("Waiting 30 seconds before next session...")
+                        time.sleep(30)
                     else:
                         self.logger.error("="*60)
                         self.logger.error("CRITICAL: IP change FAILED!")
@@ -366,10 +369,6 @@ class PortalBot:
                         self.monitoring.mark_activity()
                         time.sleep(10)
                         continue
-                    
-                    # Pauza między sesjami (60 sekund - aby mieć pewność że IP się zmieniło)
-                    self.logger.info("Waiting 60 seconds before next session (ensuring IP change)...")
-                    time.sleep(60)
                     
                 except KeyboardInterrupt:
                     self.logger.info("\nStopping bot (Ctrl+C pressed)...")

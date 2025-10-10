@@ -195,7 +195,7 @@ class FingerprintGenerator:
         
         options = Options()
         
-        # HEADLESS MODE - testujemy czy zadziała z poprawkami Analytics
+        # HEADLESS MODE
         options.add_argument('--headless=new')
         
         # User Agent
