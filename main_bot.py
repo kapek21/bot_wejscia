@@ -250,10 +250,10 @@ class PortalBot:
             for traffic_type, count in type_counts.items():
                 self.logger.info(f"  - {traffic_type}: {count} browsers")
             
-            # Uruchom w falach (15 na raz - limit iproxy.online)
-            # 96 przeglądarek / 15 per batch = 7 batches (6×15 + 6)
+            # Uruchom w falach (5 na raz - stabilny limit dla proxy)
+            # 96 przeglądarek / 5 per batch = 20 batches (19×5 + 1)
             success_count = 0
-            batch_size = 15  # LIMIT PROXY: maksymalnie 15 jednocześnie
+            batch_size = 5  # LIMIT PROXY: maksymalnie 5 jednocześnie dla stabilności
             
             for batch_num in range(0, len(all_tasks), batch_size):
                 batch = all_tasks[batch_num:batch_num + batch_size]
@@ -262,7 +262,7 @@ class PortalBot:
                 
                 self.logger.info(f"Starting batch {batch_index}/{total_batches} ({len(batch)} browsers)...")
                 
-                with ThreadPoolExecutor(max_workers=batch_size) as executor:
+                with ThreadPoolExecutor(max_workers=5) as executor:
                     # Wyślij batch zadań
                     futures = {
                         executor.submit(self.process_single_task, task, fingerprint): task
