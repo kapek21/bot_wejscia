@@ -137,19 +137,19 @@ class PortalBot:
             Instancja WebDriver
         """
         try:
-            # Pobierz opcje Chrome z fingerprintem i PROXY (KRYTYCZNE!)
+            # Pobierz opcje Chrome z fingerprintem i PROXY (ORYGINALNY KOD!)
             proxy_url = self.proxy_manager.get_proxy_url()
             options = FingerprintGenerator.get_chrome_options(fingerprint, proxy_url=proxy_url)
             
             # Utwórz service
             service = Service(ChromeDriverManager().install())
             
-            # Utwórz driver
+            # Utwórz driver (ORYGINALNY KOD!)
             driver = webdriver.Chrome(service=service, options=options)
             
             # Ustaw timeouty
-            driver.set_page_load_timeout(30)
-            driver.implicitly_wait(10)
+            driver.set_page_load_timeout(60)
+            driver.implicitly_wait(15)
             
             return driver
             
@@ -250,32 +250,46 @@ class PortalBot:
             for traffic_type, count in type_counts.items():
                 self.logger.info(f"  - {traffic_type}: {count} browsers")
             
-            # Uruchom wszystkie zadania równolegle (96 przeglądarek!)
+            # Uruchom w falach (15 na raz - limit iproxy.online)
+            # 96 przeglądarek / 15 per batch = 7 batches (6×15 + 6)
             success_count = 0
+            batch_size = 15  # LIMIT PROXY: maksymalnie 15 jednocześnie
             
-            with ThreadPoolExecutor(max_workers=96) as executor:
-                # Wyślij wszystkie zadania
-                futures = {
-                    executor.submit(self.process_single_task, task, fingerprint): task
-                    for task in all_tasks
-                }
+            for batch_num in range(0, len(all_tasks), batch_size):
+                batch = all_tasks[batch_num:batch_num + batch_size]
+                batch_index = batch_num // batch_size + 1
+                total_batches = (len(all_tasks) + batch_size - 1) // batch_size
                 
-                # Czekaj na wyniki
-                for future in as_completed(futures):
-                    task = futures[future]
-                    try:
-                        result = future.result()
-                        if result:
-                            success_count += 1
-                            if success_count % 10 == 0:  # Log co 10 zakończonych
-                                self.logger.info(f"Progress: {success_count}/{len(all_tasks)} completed")
-                        else:
-                            pass  # Błędy logowane w process_single_task
-                    except Exception as e:
-                        self.logger.error(f"Task {task['portal_name']}-{task['traffic_type']} crashed: {e}")
+                self.logger.info(f"Starting batch {batch_index}/{total_batches} ({len(batch)} browsers)...")
+                
+                with ThreadPoolExecutor(max_workers=batch_size) as executor:
+                    # Wyślij batch zadań
+                    futures = {
+                        executor.submit(self.process_single_task, task, fingerprint): task
+                        for task in batch
+                    }
                     
-                    # Oznacz aktywność po każdym zadaniu
-                    self.monitoring.mark_activity()
+                    # Czekaj na wyniki
+                    for future in as_completed(futures):
+                        task = futures[future]
+                        try:
+                            result = future.result()
+                            if result:
+                                success_count += 1
+                            else:
+                                pass  # Błędy logowane w process_single_task
+                        except Exception as e:
+                            self.logger.error(f"Task {task['portal_name']}-{task['traffic_type']} crashed: {e}")
+                        
+                        # Oznacz aktywność po każdym zadaniu
+                        self.monitoring.mark_activity()
+                
+                self.logger.info(f"Batch {batch_index}/{total_batches} completed. Total progress: {success_count}/{len(all_tasks)}")
+                
+                # Krótka pauza między batchami (NIE zmiana IP!)
+                if batch_num + batch_size < len(all_tasks):
+                    self.logger.info(f"Waiting 3s before next batch...")
+                    time.sleep(3)
             
             # Sesja zakończona
             session_success = success_count >= len(all_tasks) * 0.7  # 70% zadań musi się udać
