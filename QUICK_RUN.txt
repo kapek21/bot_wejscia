@@ -1,0 +1,57 @@
+═══════════════════════════════════════════════════════════
+         PORTAL BOT - SZYBKIE URUCHOMIENIE
+═══════════════════════════════════════════════════════════
+
+INSTALACJA (RAZ):
+-----------------
+1. Kliknij 2x na: install.bat
+2. Poczekaj aż zainstaluje zależności
+3. Test proxy: python test_proxy.py (KRYTYCZNE!)
+4. Gotowe!
+
+URUCHOMIENIE:
+-------------
+Kliknij 2x na: start_bot.bat
+
+ZATRZYMANIE:
+------------
+Naciśnij: Ctrl+C w oknie konsoli
+
+CO ROBI BOT:
+------------
+✓ Testuje proxy iproxy.online (OBOWIĄZKOWE!)
+✓ Otwiera 16 przeglądarek Chrome przez proxy (niewidoczne)
+✓ Odwiedza wszystkie portale z portale.xlsx
+✓ Scrolluje jak człowiek (12-18s strona główna)
+✓ Wchodzi w artykuł (14-20s)
+✓ Zamyka przeglądarki
+✓ Zmienia IP przez API
+✓ Czeka 60 sekund (aby IP się zmienił)
+✓ Powtarza w nieskończoność z nowym IP
+
+STATYSTYKI:
+-----------
+Bot wyświetla statystyki co 30 sekund:
+- IP
+- Liczba sesji
+- Liczba wejść na strony
+- Czas działania
+
+LOGI:
+-----
+Zobacz: logs/portal_bot.log
+
+PROBLEMY?
+---------
+1. NAJPIERW: Test proxy: python test_proxy.py
+2. Sprawdź czy Python jest zainstalowany: python --version
+3. Sprawdź czy Chrome jest zainstalowany
+4. Zainstaluj ponownie: install.bat
+5. Zobacz logi: logs/portal_bot.log
+6. Przeczytaj: README.md lub PROXY_INFO.md
+
+═══════════════════════════════════════════════════════════
+   Bot działa 24/7 z automatycznym restartem i zmianą IP!
+     WYMAGA PROXY iproxy.online - bez proxy nie działa!
+═══════════════════════════════════════════════════════════
+
