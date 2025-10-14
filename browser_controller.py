@@ -236,13 +236,13 @@ class BrowserController:
         try:
             self.logger.info(f"Visiting homepage: {self.portal_url} (type: {self.traffic_type})")
             
-            # Ustaw referer jeśli jest (dla Google organic)
+            # Ustaw referer w headerze (bez faktycznego wejścia - oszczędza requesty)
             if self.referer:
-                # Najpierw wejdź na referer
                 try:
-                    self.driver.get(self.referer)
-                    time.sleep(random.uniform(1.0, 2.0))
+                    # Ustaw referer przez JavaScript przed wejściem na stronę
+                    self.driver.execute_cdp_cmd('Network.setExtraHTTPHeaders', {'headers': {'Referer': self.referer}})
                 except:
+                    # Fallback - niektóre wersje Chrome nie wspierają CDP
                     pass
             
             # Wejdź na stronę
@@ -308,11 +308,12 @@ class BrowserController:
             True jeśli udało się odwiedzić artykuł, False w przeciwnym razie
         """
         try:
-            # Pobierz losowy link
+            # Pobierz losowy link (z cache stron głównych dla przyspieszenia)
             article_url = self.get_random_link()
             
             if not article_url:
-                self.logger.warning("No article found, skipping article visit")
+                # Jeśli nie znaleziono artykułu, zostań na głównej dłużej
+                time.sleep(10)
                 return False
             
             self.logger.info(f"Visiting article: {article_url[:100]}")

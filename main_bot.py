@@ -147,6 +147,9 @@ class PortalBot:
                 proxy_url = self.proxy_manager.get_proxy_url()
             
             options, seleniumwire_options = FingerprintGenerator.get_chrome_options(fingerprint, proxy_url=proxy_url)
+            # Pobierz opcje Chrome z fingerprintem i PROXY (ORYGINALNY KOD!)
+            proxy_url = self.proxy_manager.get_proxy_url()
+            options = FingerprintGenerator.get_chrome_options(fingerprint, proxy_url=proxy_url)
             
             # Utwórz service
             service = Service(ChromeDriverManager().install())
@@ -157,6 +160,12 @@ class PortalBot:
             # Ustaw timeouty
             driver.set_page_load_timeout(30)
             driver.implicitly_wait(1)  # 1s dla bardzo szybkiego find_elements
+            # Utwórz driver (ORYGINALNY KOD!)
+            driver = webdriver.Chrome(service=service, options=options)
+            
+            # Ustaw timeouty
+            driver.set_page_load_timeout(60)
+            driver.implicitly_wait(15)
             
             return driver
             
@@ -266,7 +275,10 @@ class PortalBot:
                 self.logger.info(f"  - {traffic_type}: {count} browsers")
             
             # Uruchom wszystkie zadania równolegle (64 przeglądarki, 15 naraz)
+            # Uruchom w falach (5 na raz - stabilny limit dla proxy)
+            # 96 przeglądarek / 5 per batch = 20 batches (19×5 + 1)
             success_count = 0
+            batch_size = 5  # LIMIT PROXY: maksymalnie 5 jednocześnie dla stabilności
             
             with ThreadPoolExecutor(max_workers=15) as executor:
                 # Wyślij wszystkie zadania sekwencyjnie z dedykowanym proxy dla każdego
@@ -281,23 +293,40 @@ class PortalBot:
                     task['proxy_port'] = self.proxy_list[proxy_index]['port']
                     
                     futures[executor.submit(self.process_single_task, task, fingerprint, proxy_url)] = task
+            for batch_num in range(0, len(all_tasks), batch_size):
+                batch = all_tasks[batch_num:batch_num + batch_size]
+                batch_index = batch_num // batch_size + 1
+                total_batches = (len(all_tasks) + batch_size - 1) // batch_size
                 
-                # Czekaj na wyniki
-                for future in as_completed(futures):
-                    task = futures[future]
-                    try:
-                        result = future.result()
-                        if result:
-                            success_count += 1
-                            if success_count % 10 == 0:  # Log co 10 zakończonych
-                                self.logger.info(f"Progress: {success_count}/{len(all_tasks)} completed")
-                        else:
-                            pass  # Błędy logowane w process_single_task
-                    except Exception as e:
-                        self.logger.error(f"Task {task['portal_name']}-{task['traffic_type']} crashed: {e}")
+                self.logger.info(f"Starting batch {batch_index}/{total_batches} ({len(batch)} browsers)...")
+                
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    # Wyślij batch zadań
+                    futures = {
+                        executor.submit(self.process_single_task, task, fingerprint): task
+                        for task in batch
+                    }
                     
-                    # Oznacz aktywność po każdym zadaniu
-                    self.monitoring.mark_activity()
+                    # Czekaj na wyniki
+                    for future in as_completed(futures):
+                        task = futures[future]
+                        try:
+                            result = future.result()
+                            if result:
+                                success_count += 1
+                            else:
+                                pass  # Błędy logowane w process_single_task
+                        except Exception as e:
+                            self.logger.error(f"Task {task['portal_name']}-{task['traffic_type']} crashed: {e}")
+                        
+                        # Oznacz aktywność po każdym zadaniu
+                        self.monitoring.mark_activity()
+                
+                self.logger.info(f"Batch {batch_index}/{total_batches} completed. Total progress: {success_count}/{len(all_tasks)}")
+                
+                # Krótka pauza między batchami - 1s dla stabilności
+                if batch_num + batch_size < len(all_tasks):
+                    time.sleep(1)
             
             # Sesja zakończona
             session_success = success_count >= len(all_tasks) * 0.7  # 70% zadań musi się udać
@@ -365,6 +394,10 @@ class PortalBot:
                     if ip_change_success:
                         self.logger.info("✓ IP changed successfully!")
                         self.logger.info(f"New IP: {self.proxy_manager.current_ip}")
+                        
+                        # Pauza 30s (IP już się zmienił, wystarczy krótsza pauza)
+                        self.logger.info("Waiting 30 seconds before next session...")
+                        time.sleep(30)
                     else:
                         self.logger.error("="*60)
                         self.logger.error("CRITICAL: IP change FAILED!")
@@ -374,10 +407,6 @@ class PortalBot:
                         self.monitoring.mark_activity()
                         time.sleep(10)
                         continue
-                    
-                    # Pauza między sesjami (60 sekund - aby mieć pewność że IP się zmieniło)
-                    self.logger.info("Waiting 60 seconds before next session (ensuring IP change)...")
-                    time.sleep(60)
                     
                 except KeyboardInterrupt:
                     self.logger.info("\nStopping bot (Ctrl+C pressed)...")
