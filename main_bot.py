@@ -18,7 +18,7 @@ import os
 from fingerprint_generator import FingerprintGenerator
 from browser_controller import BrowserController
 from monitoring import MonitoringSystem
-from proxy_manager import create_proxy_manager_from_config
+from proxy_manager import create_proxy_manager_from_config, get_proxy_list_orange1
 from traffic_types import TrafficMixer
 
 
@@ -53,6 +53,10 @@ class PortalBot:
             raise RuntimeError("Proxy test failed - bot cannot start without working proxy")
         
         self.logger.info("✓ Proxy is working correctly!")
+        
+        # Załaduj listę 15 proxy access pointów
+        self.proxy_list = get_proxy_list_orange1()
+        self.logger.info(f"Loaded {len(self.proxy_list)} proxy access points for orange1")
         
         # Załaduj portale
         self.portals = self.load_portals(excel_file)
@@ -126,17 +130,23 @@ class PortalBot:
             logging.error(f"Error loading portals from Excel: {e}")
             raise
     
-    def create_driver(self, fingerprint: dict) -> webdriver.Chrome:
+    def create_driver(self, fingerprint: dict, proxy_url: str = None) -> webdriver.Chrome:
         """
         Tworzy instancję Chrome WebDriver z fingerprintem i proxy
         
         Args:
             fingerprint: Dane fingerprinta
+            proxy_url: URL proxy (jeśli None, użyje domyślnego z proxy_manager)
             
         Returns:
             Instancja WebDriver
         """
         try:
+            # Pobierz opcje Chrome z fingerprintem i dedykowanym PROXY dla workera!
+            if proxy_url is None:
+                proxy_url = self.proxy_manager.get_proxy_url()
+            
+            options, seleniumwire_options = FingerprintGenerator.get_chrome_options(fingerprint, proxy_url=proxy_url)
             # Pobierz opcje Chrome z fingerprintem i PROXY (ORYGINALNY KOD!)
             proxy_url = self.proxy_manager.get_proxy_url()
             options = FingerprintGenerator.get_chrome_options(fingerprint, proxy_url=proxy_url)
@@ -144,6 +154,12 @@ class PortalBot:
             # Utwórz service
             service = Service(ChromeDriverManager().install())
             
+            # Utwórz driver ze zwykłym selenium (proxy extension w opcjach)
+            driver = webdriver.Chrome(service=service, options=options)
+            
+            # Ustaw timeouty
+            driver.set_page_load_timeout(30)
+            driver.implicitly_wait(1)  # 1s dla bardzo szybkiego find_elements
             # Utwórz driver (ORYGINALNY KOD!)
             driver = webdriver.Chrome(service=service, options=options)
             
@@ -157,31 +173,33 @@ class PortalBot:
             self.logger.error(f"Error creating driver: {e}")
             raise
     
-    def process_single_task(self, task: dict, fingerprint: dict) -> bool:
+    def process_single_task(self, task: dict, fingerprint: dict, proxy_url: str = None) -> bool:
         """
         Przetwarza pojedyncze zadanie (1 przeglądarka z określonym typem ruchu)
         
         Args:
             task: Dane zadania {'url', 'referer', 'traffic_type', 'portal_name', 'wojewodztwo'}
             fingerprint: Dane fingerprinta dla sesji
+            proxy_url: URL proxy dla tego zadania (dedykowane proxy)
             
         Returns:
             True jeśli zadanie zakończyło się sukcesem
         """
         driver = None
         try:
-            # Utwórz przeglądarkę
-            driver = self.create_driver(fingerprint)
+            # Utwórz przeglądarkę z dedykowanym proxy
+            driver = self.create_driver(fingerprint, proxy_url=proxy_url)
             self.current_drivers.append(driver)
             
-            # Utwórz kontroler z refererem i typem ruchu
+            # Utwórz kontroler z refererem, typem ruchu i województwem
             controller = BrowserController(
                 driver=driver,
                 portal_url=task['url'],
                 portal_name=task['portal_name'],
                 fingerprint=fingerprint,
                 referer=task.get('referer'),
-                traffic_type=task['traffic_type']
+                traffic_type=task['traffic_type'],
+                wojewodztwo=task.get('wojewodztwo', 'mazowieckie')
             )
             
             # Odwiedź stronę główną (12-18 sekund)
@@ -189,15 +207,21 @@ class PortalBot:
             self.monitoring.increment_page_visits(1, traffic_type=task['traffic_type'])
             
             # Odwiedź artykuł (14-20 sekund)
+            self.logger.info(f"{task['portal_name']}: Visiting article...")
             article_visited = controller.visit_article(min_time=14, max_time=20)
             if article_visited:
                 self.monitoring.increment_page_visits(1, traffic_type=task['traffic_type'])
+                self.logger.info(f"{task['portal_name']}: Article visited successfully")
+            else:
+                self.logger.info(f"{task['portal_name']}: Article visit skipped")
             
             # Zlicz sesję dla typu ruchu
             self.monitoring.increment_traffic_session(task['traffic_type'])
             
             # Zamknij przeglądarkę
+            self.logger.info(f"{task['portal_name']}: Closing browser...")
             controller.close()
+            self.logger.info(f"{task['portal_name']}: Browser closed successfully")
             
             if driver in self.current_drivers:
                 self.current_drivers.remove(driver)
@@ -220,7 +244,7 @@ class PortalBot:
     
     def run_session(self) -> bool:
         """
-        Uruchamia jedną sesję - 96 przeglądarek (16 direct + 48 google + 16 facebook + 16 social)
+        Uruchamia jedną sesję - 64 przeglądarki (16 direct + 16 google + 16 facebook + 16 social)
         
         Returns:
             True jeśli sesja zakończyła się sukcesem
@@ -237,7 +261,7 @@ class PortalBot:
             fingerprint = FingerprintGenerator.generate()
             self.logger.info(f"Generated fingerprint: {fingerprint['user_agent'][:60]}...")
             
-            # Wygeneruj wszystkie zadania (96 = 16 × 6 typów ruchu)
+            # Wygeneruj wszystkie zadania (64 = 16 portali × 4 typy ruchu)
             all_tasks = TrafficMixer.generate_all_traffic(self.portals)
             
             self.logger.info(f"Generated {len(all_tasks)} tasks:")
@@ -250,11 +274,25 @@ class PortalBot:
             for traffic_type, count in type_counts.items():
                 self.logger.info(f"  - {traffic_type}: {count} browsers")
             
+            # Uruchom wszystkie zadania równolegle (64 przeglądarki, 15 naraz)
             # Uruchom w falach (5 na raz - stabilny limit dla proxy)
             # 96 przeglądarek / 5 per batch = 20 batches (19×5 + 1)
             success_count = 0
             batch_size = 5  # LIMIT PROXY: maksymalnie 5 jednocześnie dla stabilności
             
+            with ThreadPoolExecutor(max_workers=15) as executor:
+                # Wyślij wszystkie zadania sekwencyjnie z dedykowanym proxy dla każdego
+                # Każde zadanie dostaje swoje dedykowane proxy (rotacja przez 15 proxy)
+                futures = {}
+                for i, task in enumerate(all_tasks):
+                    # Przypisz proxy: dla zadań 0-14 użyj proxy 0-14, dla 15-29 znowu 0-14, itd.
+                    proxy_index = i % len(self.proxy_list)
+                    proxy_url = self.proxy_list[proxy_index]['url']
+                    
+                    # Dodaj info o proxy do zadania (dla logowania)
+                    task['proxy_port'] = self.proxy_list[proxy_index]['port']
+                    
+                    futures[executor.submit(self.process_single_task, task, fingerprint, proxy_url)] = task
             for batch_num in range(0, len(all_tasks), batch_size):
                 batch = all_tasks[batch_num:batch_num + batch_size]
                 batch_index = batch_num // batch_size + 1

@@ -76,31 +76,33 @@ class MonitoringSystem:
             self.logger.warning(f"Could not load stats: {e}")
     
     def save_stats(self):
-        """Zapisuje statystyki do pliku"""
+        """Zapisuje statystyki do pliku (bez locka aby nie blokować)"""
         try:
-            with self.lock:
-                data = {
-                    'successful_sessions': self.successful_sessions,
-                    'failed_sessions': self.failed_sessions,
-                    'total_page_visits': self.total_page_visits,
-                    'traffic_stats': self.traffic_stats,
-                    'total_ip_changes': self.total_ip_changes,
-                    'failed_ip_changes': self.failed_ip_changes,
-                    'last_update': datetime.now().isoformat(),
-                    'current_ip': self.current_ip,
-                }
-                with open(self.stats_file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, indent=2, ensure_ascii=False)
+            # Kopiuj dane BEZ trzymania locka (może być race condition ale nie krytyczne)
+            data = {
+                'successful_sessions': self.successful_sessions,
+                'failed_sessions': self.failed_sessions,
+                'total_page_visits': self.total_page_visits,
+                'traffic_stats': self.traffic_stats.copy(),
+                'total_ip_changes': self.total_ip_changes,
+                'failed_ip_changes': self.failed_ip_changes,
+                'last_update': datetime.now().isoformat(),
+                'current_ip': self.current_ip,
+            }
+            # Zapisz do pliku BEZ locka
+            with open(self.stats_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
         except Exception as e:
             self.logger.warning(f"Could not save stats: {e}")
     
     def update_ip(self):
         """Aktualizuje informację o aktualnym IP (używa proxy jeśli dostępne)"""
         try:
-            # Jeśli mamy proxy manager, użyj go
+            # Jeśli mamy proxy manager, użyj go (BEZ LOCKA - żeby nie blokować!)
             if self.proxy_manager:
                 ip = self.proxy_manager.get_current_ip(use_proxy=True)
                 if ip:
+                    # Ustaw IP bez locka - to atomic operation
                     self.current_ip = ip
                     self.logger.info(f"Current IP (via proxy): {self.current_ip}")
                     return
@@ -188,8 +190,6 @@ class MonitoringSystem:
                 base_type = traffic_type.split('-')[0]
                 if base_type in self.traffic_stats:
                     self.traffic_stats[base_type]['page_visits'] += count
-            
-            self.save_stats()
     
     def increment_traffic_session(self, traffic_type: str):
         """
@@ -202,7 +202,9 @@ class MonitoringSystem:
             base_type = traffic_type.split('-')[0]
             if base_type in self.traffic_stats:
                 self.traffic_stats[base_type]['sessions'] += 1
-            self.save_stats()
+        
+        # Zapisz statystyki BEZ locka (po zwolnieniu)
+        self.save_stats()
     
     def increment_ip_change(self, success: bool = True):
         """
@@ -219,25 +221,24 @@ class MonitoringSystem:
     
     def get_stats(self) -> Dict:
         """
-        Zwraca aktualne statystyki
+        Zwraca aktualne statystyki (bez locka - tylko czyta dane)
         
         Returns:
             Słownik ze statystykami
         """
-        with self.lock:
-            uptime = datetime.now() - self.start_time
-            uptime_str = str(uptime).split('.')[0]  # Usuń mikrosekundy
-            
-            return {
-                'total_sessions': self.total_sessions,
-                'successful_sessions': self.successful_sessions,
-                'failed_sessions': self.failed_sessions,
-                'total_page_visits': self.total_page_visits,
-                'current_ip': self.current_ip,
-                'uptime': uptime_str,
-                'start_time': self.start_time.strftime('%Y-%m-%d %H:%M:%S'),
-                'last_activity': time.time() - self.last_activity_time,
-            }
+        uptime = datetime.now() - self.start_time
+        uptime_str = str(uptime).split('.')[0]  # Usuń mikrosekundy
+        
+        return {
+            'total_sessions': self.total_sessions,
+            'successful_sessions': self.successful_sessions,
+            'failed_sessions': self.failed_sessions,
+            'total_page_visits': self.total_page_visits,
+            'current_ip': self.current_ip,
+            'uptime': uptime_str,
+            'start_time': self.start_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'last_activity': time.time() - self.last_activity_time,
+        }
     
     def print_stats(self):
         """Wyświetla statystyki w konsoli"""
