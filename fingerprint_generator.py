@@ -134,9 +134,12 @@ class FingerprintGenerator:
         return fingerprint
     
     @staticmethod
-    def generate_cookies() -> List[Dict]:
+    def generate_cookies(wojewodztwo: str = None) -> List[Dict]:
         """
-        Generuje realistyczne cookies które sprawiają że bot wygląda jak prawdziwy użytkownik
+        Generuje realistyczne cookies z demografią użytkownika
+        
+        Args:
+            wojewodztwo: Nazwa województwa (opcjonalne)
         """
         cookies = []
         
@@ -148,6 +151,10 @@ class FingerprintGenerator:
         
         # Cookie zgody na cookies (RODO)
         consent_value = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+        
+        # DEMOGRAFIA - wiek 19-50 lat, województwo
+        user_age = random.randint(19, 50)
+        user_region = wojewodztwo if wojewodztwo else "mazowieckie"
         
         cookies_list = [
             {
@@ -178,6 +185,22 @@ class FingerprintGenerator:
                 'path': '/',
                 'expires': None,
             },
+            # DEMOGRAFIA - wiek 19-50
+            {
+                'name': 'user_age',
+                'value': str(user_age),
+                'domain': '',
+                'path': '/',
+                'expires': None,
+            },
+            # Województwo
+            {
+                'name': 'user_region',
+                'value': user_region,
+                'domain': '',
+                'path': '/',
+                'expires': None,
+            },
         ]
         
         return cookies_list
@@ -185,18 +208,21 @@ class FingerprintGenerator:
     @staticmethod
     def get_chrome_options(fingerprint: Dict, proxy_url: str = None):
         """
-        Zwraca opcje Chrome skonfigurowane z fingerprintem i proxy
+        Zwraca opcje Chrome skonfigurowane z fingerprintem i proxy (selenium-wire)
         
         Args:
             fingerprint: Dane fingerprinta
-            proxy_url: URL proxy w formacie http://user:pass@host:port (opcjonalnie)
+            proxy_url: URL proxy w formacie socks5://user:pass@host:port (opcjonalnie)
+            
+        Returns:
+            tuple: (options, seleniumwire_options) - opcje dla Chrome i selenium-wire
         """
         from selenium.webdriver.chrome.options import Options
         
         options = Options()
         
-        # HEADLESS MODE - testujemy czy zadziała z poprawkami Analytics
-        options.add_argument('--headless=new')
+        # HEADLESS MODE wyłączony - używamy proxy extension (wymaga GUI)
+        # options.add_argument('--headless=new')
         
         # User Agent
         options.add_argument(f'user-agent={fingerprint["user_agent"]}')
@@ -206,21 +232,15 @@ class FingerprintGenerator:
         options.add_argument(f'--window-size=400,300')
         options.add_argument(f'--window-position={random.randint(0, 1000)},{random.randint(0, 500)}')
         
-        # PROXY - KRYTYCZNE! Używamy rozszerzenia dla auth
+        # PROXY - KRYTYCZNE! Używamy proxy extension (działa bez headless)
+        seleniumwire_options = {}
         if proxy_url:
-            # Chrome wymaga rozszerzenia dla proxy z autentykacją
+            # Chrome wymaga rozszerzenia dla proxy z autentykacją lub bez
             import os
             extension_path = os.path.join(os.path.dirname(__file__), 'proxy_extension')
             if os.path.exists(extension_path):
                 options.add_argument(f'--load-extension={extension_path}')
-            else:
-                # Fallback - tylko host:port bez auth
-                import re
-                match = re.search(r'https?://[^@]+@([^:]+):(\d+)', proxy_url)
-                if match:
-                    proxy_host = match.group(1)
-                    proxy_port = match.group(2)
-                    options.add_argument(f'--proxy-server=http://{proxy_host}:{proxy_port}')
+                # proxy_extension jest już skonfigurowane w background.js
         
         # Ukryj automatyzację
         options.add_argument('--disable-blink-features=AutomationControlled')
@@ -259,5 +279,5 @@ class FingerprintGenerator:
         # Ustaw language
         options.add_argument(f'--lang={fingerprint["language"].split(",")[0]}')
         
-        return options
+        return options, seleniumwire_options
 

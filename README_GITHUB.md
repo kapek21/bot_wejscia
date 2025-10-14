@@ -184,10 +184,11 @@ python test_headless_analytics.py
 ⚠️ **Dane wrażliwe - nie commituj publicznie!**
 
 ```python
-proxy_host = "x340.fxdx.in"
-proxy_port = 13206
-proxy_username = "softedgedtrailhead104154"
-proxy_password = "jIhUckJtAOt9"
+# SOCKS5 Proxy - orange1 device
+proxy_host = "x428.fxdx.in"
+proxy_port = 13350
+proxy_username = "karol1234567"
+proxy_password = "Karol1234567"
 change_ip_url = "https://iproxy.online/api-rt/changeip/..."
 ```
 

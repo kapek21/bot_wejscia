@@ -17,7 +17,7 @@ import math
 class BrowserController:
     """Kontroluje przeglądarkę symulując zachowanie człowieka"""
     
-    def __init__(self, driver: webdriver.Chrome, portal_url: str, portal_name: str, fingerprint: dict, referer: str = None, traffic_type: str = "direct"):
+    def __init__(self, driver: webdriver.Chrome, portal_url: str, portal_name: str, fingerprint: dict, referer: str = None, traffic_type: str = "direct", wojewodztwo: str = None):
         """
         Inicjalizuje kontroler przeglądarki
         
@@ -28,6 +28,7 @@ class BrowserController:
             fingerprint: Dane fingerprinta dla tej sesji
             referer: HTTP Referer (dla Google organic)
             traffic_type: Typ ruchu (direct/google/facebook/social)
+            wojewodztwo: Województwo dla cookies demograficznych
         """
         self.driver = driver
         self.portal_url = portal_url
@@ -35,6 +36,7 @@ class BrowserController:
         self.fingerprint = fingerprint
         self.referer = referer
         self.traffic_type = traffic_type
+        self.wojewodztwo = wojewodztwo if wojewodztwo else "mazowieckie"
         self.logger = logging.getLogger(f"Browser-{portal_name}-{traffic_type}")
         
     def inject_fingerprint_scripts(self):
@@ -249,8 +251,14 @@ class BrowserController:
             # Wstrzyknij fingerprint
             self.inject_fingerprint_scripts()
             
-            # WAŻNE: Czekaj aby Google Analytics się załadował
+            # Ustaw cookies demograficzne (wiek 19-50, województwo)
+            self.set_demographic_cookies()
+            
+            # WAŻNE: Czekaj aby strona się załadowała
             time.sleep(random.uniform(2.5, 4.0))
+            
+            # Akceptuj cookies banner
+            self.accept_cookies()
             
             # Wymuś wykonanie pending analytics events
             try:
@@ -355,6 +363,69 @@ class BrowserController:
         except Exception as e:
             self.logger.error(f"Error visiting article: {e}")
             return False
+    
+    def set_demographic_cookies(self):
+        """
+        Ustawia cookies demograficzne (wiek 19-50, województwo)
+        """
+        try:
+            from fingerprint_generator import FingerprintGenerator
+            
+            # Generuj cookies z demografią
+            cookies = FingerprintGenerator.generate_cookies(wojewodztwo=self.wojewodztwo)
+            
+            # Ustaw cookies
+            for cookie in cookies:
+                try:
+                    # Ustaw domenę na aktualną
+                    from urllib.parse import urlparse
+                    domain = urlparse(self.portal_url).netloc
+                    cookie['domain'] = '.' + domain  # Dodaj kropkę na początku
+                    
+                    self.driver.add_cookie(cookie)
+                except Exception as e:
+                    # Ignoruj błędy pojedynczych cookies
+                    pass
+            
+            self.logger.info(f"Demographic cookies set (age: 19-50, region: {self.wojewodztwo})")
+            
+        except Exception as e:
+            self.logger.warning(f"Error setting demographic cookies: {e}")
+    
+    def accept_cookies(self):
+        """
+        Próbuje kliknąć przycisk akceptacji cookies
+        Sprawdza popularne selektory (Accept All, Zgadzam się, itp.)
+        """
+        try:
+            # Lista popularnych selektorów dla przycisków cookies
+            selectors = [
+                "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'accept all')]",
+                "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'zgadzam się')]",
+                "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'akceptuj')]",
+                "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'accept')]",
+                "//button[contains(@id, 'accept')]",
+                "//button[contains(@class, 'accept')]",
+                "//a[contains(@class, 'accept')]",
+                "//div[contains(@class, 'cookie')]//button[1]",
+            ]
+            
+            for selector in selectors:
+                try:
+                    button = self.driver.find_element(By.XPATH, selector)
+                    if button.is_displayed():
+                        button.click()
+                        self.logger.info("Cookies accepted")
+                        time.sleep(random.uniform(0.5, 1.5))
+                        return
+                except:
+                    continue
+            
+            # Jeśli nie znaleziono przycisku - OK, kontynuuj
+            
+        except Exception as e:
+            # Ignoruj błędy - nie wszystkie strony mają cookies banner
+            pass
     
     def close(self):
         """Zamyka przeglądarkę"""

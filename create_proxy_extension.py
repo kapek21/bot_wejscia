@@ -81,12 +81,12 @@ chrome.webRequest.onAuthRequired.addListener(
 
 
 if __name__ == "__main__":
-    # Test
+    # Test - orange1 device (SOCKS5)
     ext_dir = create_proxy_extension(
-        "x340.fxdx.in",
-        "13206",
-        "softedgedtrailhead104154",
-        "jIhUckJtAOt9"
+        "x428.fxdx.in",
+        "13350",
+        "karol1234567",
+        "Karol1234567"
     )
     print(f"Proxy extension created in: {ext_dir}")
 

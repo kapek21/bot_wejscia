@@ -20,20 +20,20 @@ class ProxyManager:
         api_key_1: str,
         api_key_2: str,
         change_ip_url: str,
-        device_name: str = "tmobile1"
+        device_name: str = "orange1"
     ):
         """
-        Inicjalizuje menedżer proxy
+        Inicjalizuje menedżer proxy (SOCKS5)
         
         Args:
-            proxy_host: Host proxy (np. x340.fxdx.in)
-            proxy_port: Port proxy (np. 13206)
+            proxy_host: Host proxy (np. x428.fxdx.in)
+            proxy_port: Port proxy (np. 13350)
             proxy_username: Username do proxy
             proxy_password: Hasło do proxy
-            api_key_1: Pierwszy klucz API
-            api_key_2: Drugi klucz API
+            api_key_1: Pierwszy klucz API (nieużywany)
+            api_key_2: Drugi klucz API (nieużywany)
             change_ip_url: URL do zmiany IP
-            device_name: Nazwa urządzenia (domyślnie tmobile1)
+            device_name: Nazwa urządzenia (domyślnie orange1)
         """
         self.proxy_host = proxy_host
         self.proxy_port = proxy_port
@@ -55,16 +55,17 @@ class ProxyManager:
         Zwraca URL proxy w formacie dla Chrome
         
         Returns:
-            URL proxy (http://username:password@host:port)
+            URL proxy (socks5://username:password@host:port)
         """
-        return f"http://{self.proxy_username}:{self.proxy_password}@{self.proxy_host}:{self.proxy_port}"
+        return f"socks5://{self.proxy_username}:{self.proxy_password}@{self.proxy_host}:{self.proxy_port}"
     
     def get_proxy_dict(self) -> Dict[str, str]:
         """
-        Zwraca słownik proxy dla requests
+        Zwraca słownik proxy dla requests (SOCKS5)
+        Wymaga zainstalowanej biblioteki PySocks
         
         Returns:
-            Dict z proxy dla http i https
+            Dict z proxy dla http i https (SOCKS5)
         """
         proxy_url = self.get_proxy_url()
         return {
@@ -211,6 +212,7 @@ class ProxyManager:
         print("\n" + "="*60)
         print("PROXY CONFIGURATION".center(60))
         print("="*60)
+        print(f"Protocol: SOCKS5")
         print(f"Host: {info['proxy_host']}:{info['proxy_port']}")
         print(f"Username: {info['proxy_username']}")
         print(f"Device: {info['device']}")
@@ -227,9 +229,9 @@ def create_proxy_manager_from_config() -> ProxyManager:
     Returns:
         Instancja ProxyManager
     """
-    # Parsuj dane proxy
-    # Format: http://x340.fxdx.in:13206:softedgedtrailhead104154:jIhUckJtAOt9
-    proxy_full = "x340.fxdx.in:13206:softedgedtrailhead104154:jIhUckJtAOt9"
+    # Parsuj dane proxy (SOCKS5)
+    # Format: socks5://x428.fxdx.in:13350:karol1234567:Karol1234567
+    proxy_full = "x428.fxdx.in:13350:karol1234567:Karol1234567"
     parts = proxy_full.split(':')
     
     proxy_host = parts[0]
@@ -237,15 +239,15 @@ def create_proxy_manager_from_config() -> ProxyManager:
     proxy_username = parts[2]
     proxy_password = parts[3]
     
-    # Klucze API
-    api_key_1 = "f661d5f96788ccb81588f6d09a35ee22c05976047dc20142a50cdc0898b8b758"
-    api_key_2 = "c45b49d179af7d7cbcbf06f0c1a252bdfd8f379b0d362606bb45e96880f6f030"
+    # Klucze API (nieużywane, ale zostawione dla kompatybilności)
+    api_key_1 = ""
+    api_key_2 = ""
     
-    # URL zmiany IP
-    change_ip_url = "https://iproxy.online/api-rt/changeip/laun4g452b/x589FCCSBYYAY672XTTVR"
+    # URL zmiany IP - orange1
+    change_ip_url = "https://iproxy.online/api-rt/changeip/zackshgdiz/xBX8H535BMNW7BW56TXP8"
     
-    # Urządzenie
-    device_name = "tmobile1"
+    # Urządzenie - orange1
+    device_name = "orange1"
     
     return ProxyManager(
         proxy_host=proxy_host,
@@ -257,4 +259,26 @@ def create_proxy_manager_from_config() -> ProxyManager:
         change_ip_url=change_ip_url,
         device_name=device_name
     )
+
+
+def get_proxy_list_orange1():
+    """
+    Zwraca listę 15 proxy access pointów dla orange1 (BEZ AUTENTYKACJI - whitelist IP)
+    
+    Returns:
+        Lista dict z danymi proxy
+    """
+    # 15 różnych proxy access pointów SOCKS5 (bez username/password)
+    ports = [13350, 13358, 13359, 13360, 13361, 13362, 13363, 13364, 
+             13365, 13366, 13367, 13368, 13369, 13370, 13371]
+    
+    proxies = []
+    for port in ports:
+        proxies.append({
+            'host': 'x428.fxdx.in',
+            'port': port,
+            'url': f'socks5://x428.fxdx.in:{port}'  # BEZ autentykacji!
+        })
+    
+    return proxies
 

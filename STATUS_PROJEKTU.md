@@ -15,9 +15,8 @@
 - ✅ **16 Social Media** - random (reddit/twitter/x/linkedin)
 
 ### 2. **Proxy iproxy.online** (OBOWIĄZKOWE)
-- ✅ IP: 188.146.0.80
-- ✅ Lokalizacja: Mińsk Mazowiecki, Polska (T-Mobile)
-- ✅ Device: tmobile1
+- ✅ Protocol: SOCKS5
+- ✅ Device: orange1
 - ✅ Automatyczna zmiana IP po każdej sesji
 - ✅ Reset bota jeśli zmiana IP nie działa
 
@@ -162,11 +161,12 @@ TOTAL:         96 przeglądarek × 2 strony = 192 page views
 
 ### Proxy (skonfigurowane w `proxy_manager.py`):
 ```python
-Host: x340.fxdx.in:13206
-Username: softedgedtrailhead104154
-Password: jIhUckJtAOt9
-Device: tmobile1
-API URL: https://iproxy.online/api-rt/changeip/laun4g452b/x589FCCSBYYAY672XTTVR
+Protocol: SOCKS5
+Host: x428.fxdx.in:13350
+Username: karol1234567
+Password: Karol1234567
+Device: orange1
+API URL: https://iproxy.online/api-rt/changeip/zackshgdiz/xBX8H535BMNW7BW56TXP8
 ```
 
 ### Słowa kluczowe (w `keywords_generator.py`):

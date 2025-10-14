@@ -44,10 +44,8 @@
 - **Cykl kompletny: ~3-4 minuty**
 
 ### IP przez proxy:
-- 188.146.0.80
-- Polska, Mińsk Mazowiecki
-- T-Mobile Poland
-- Device: tmobile1
+- Protocol: SOCKS5
+- Device: orange1
 
 ### Następne kroki:
 **URUCHAMIAM PRODUKCYJNEGO BOTA - 5 SESJI TESTOWYCH**

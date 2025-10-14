@@ -9,22 +9,17 @@ Portal Bot został skonfigurowany do **obowiązkowej** pracy przez proxy iproxy.
 ### Dane dostępowe (skonfigurowane w `proxy_manager.py`):
 
 ```
-Host: x340.fxdx.in
-Port: 13206
-Username: softedgedtrailhead104154
-Password: jIhUckJtAOt9
-Device: tmobile1
-```
-
-### Klucze API:
-```
-API Key 1: f661d5f96788ccb81588f6d09a35ee22c05976047dc20142a50cdc0898b8b758
-API Key 2: c45b49d179af7d7cbcbf06f0c1a252bdfd8f379b0d362606bb45e96880f6f030
+Protocol: SOCKS5
+Host: x428.fxdx.in
+Port: 13350
+Username: karol1234567
+Password: Karol1234567
+Device: orange1
 ```
 
 ### URL zmiany IP:
 ```
-https://iproxy.online/api-rt/changeip/laun4g452b/x589FCCSBYYAY672XTTVR
+https://iproxy.online/api-rt/changeip/zackshgdiz/xBX8H535BMNW7BW56TXP8
 ```
 
 ## 🔄 Jak działa zmiana IP?
@@ -69,9 +64,10 @@ Initializing Proxy Manager...
 ============================================================
                   PROXY CONFIGURATION
 ============================================================
-Host: x340.fxdx.in:13206
-Username: softedgedtrailhead104154
-Device: tmobile1
+Protocol: SOCKS5
+Host: x428.fxdx.in:13350
+Username: karol1234567
+Device: orange1
 Current IP: Not checked yet
 ============================================================
 
@@ -100,14 +96,15 @@ Jeśli chcesz zmienić proxy, edytuj plik `proxy_manager.py`, funkcję `create_p
 
 ```python
 def create_proxy_manager_from_config() -> ProxyManager:
-    # Twoje nowe dane proxy
+    # Twoje nowe dane proxy (SOCKS5)
     proxy_host = "nowy.host.com"
     proxy_port = 12345
     proxy_username = "username"
     proxy_password = "password"
+    device_name = "orange1"
     
     # Twój nowy URL zmiany IP
-    change_ip_url = "https://..."
+    change_ip_url = "https://iproxy.online/api-rt/changeip/..."
     
     return ProxyManager(...)
 ```

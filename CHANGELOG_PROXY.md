@@ -10,17 +10,17 @@
 - Zmiana IP przez API
 - Sprawdzanie aktualnego IP przez proxy
 - Funkcja `create_proxy_manager_from_config()` z wszystkimi danymi:
-  - Host: `x340.fxdx.in:13206`
-  - Username: `softedgedtrailhead104154`
-  - Password: `jIhUckJtAOt9`
-  - Device: `tmobile1`
-  - API Keys: 2 klucze
-  - URL zmiany IP: `https://iproxy.online/api-rt/changeip/laun4g452b/x589FCCSBYYAY672XTTVR`
+  - Protocol: `SOCKS5`
+  - Host: `x428.fxdx.in:13350`
+  - Username: `karol1234567`
+  - Password: `Karol1234567`
+  - Device: `orange1`
+  - URL zmiany IP: `https://iproxy.online/api-rt/changeip/zackshgdiz/xBX8H535BMNW7BW56TXP8`
 
 ### 2. **Zaktualizowano: `fingerprint_generator.py`**
 - Metoda `get_chrome_options()` przyjmuje parametr `proxy_url`
-- Chrome automatycznie konfigurowany z proxy
-- Argument: `--proxy-server=http://user:pass@host:port`
+- Chrome automatycznie konfigurowany z proxy (SOCKS5)
+- Używa rozszerzenia Chrome `proxy_extension` dla autentykacji SOCKS5
 
 ### 3. **Zaktualizowano: `main_bot.py`**
 - Import `proxy_manager`
@@ -174,9 +174,10 @@ Initializing Proxy Manager...
 ============================================================
                   PROXY CONFIGURATION
 ============================================================
-Host: x340.fxdx.in:13206
-Username: softedgedtrailhead104154
-Device: tmobile1
+Protocol: SOCKS5
+Host: x428.fxdx.in:13350
+Username: karol1234567
+Device: orange1
 Current IP: Not checked yet
 ============================================================
 

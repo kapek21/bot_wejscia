@@ -1,7 +1,7 @@
 """
 Moduł obsługujący różne typy ruchu
 - Direct (16 przeglądarek)
-- Google Organic (48 przeglądarek - 3×16 z różnymi keywords)
+- Google Organic (16 przeglądarek - 1 keyword na portal)
 - Facebook (16 przeglądarek)
 - Social Media (16 przeglądarek - random reddit/twitter/x/linkedin)
 """
@@ -49,8 +49,8 @@ class TrafficType:
                 })
         
         elif self.name == "google":
-            # Google - 3 różne keywords dla każdego portalu
-            keywords = KeywordsGenerator.generate_keywords_for_portal(self.wojewodztwo, count=3)
+            # Google - 1 keyword dla każdego portalu
+            keywords = KeywordsGenerator.generate_keywords_for_portal(self.wojewodztwo, count=1)
             
             for i, keyword in enumerate(keywords):
                 referer = KeywordsGenerator.generate_google_referer(keyword)
@@ -130,8 +130,8 @@ class TrafficMixer:
                 task['wojewodztwo'] = wojewodztwo
             all_tasks.extend(tasks)
             
-            # 2. Google (3 przeglądarki na portal - różne keywords)
-            google = TrafficType("google", 3, portal_url, domain, wojewodztwo)
+            # 2. Google (1 przeglądarka na portal - 1 keyword)
+            google = TrafficType("google", 1, portal_url, domain, wojewodztwo)
             tasks = google.generate_urls_and_referers()
             for task in tasks:
                 task['portal_name'] = domain
