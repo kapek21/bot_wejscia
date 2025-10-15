@@ -265,10 +265,10 @@ class PortalBot:
             for traffic_type, count in type_counts.items():
                 self.logger.info(f"  - {traffic_type}: {count} browsers")
             
-            # Uruchom wszystkie zadania równolegle (64 przeglądarki, 15 naraz)
+            # Uruchom wszystkie zadania równolegle (64 przeglądarki, 6 naraz)
             success_count = 0
             
-            with ThreadPoolExecutor(max_workers=15) as executor:
+            with ThreadPoolExecutor(max_workers=6) as executor:
                 # Wyślij wszystkie zadania sekwencyjnie z dedykowanym proxy dla każdego
                 # Każde zadanie dostaje swoje dedykowane proxy (rotacja przez 15 proxy)
                 futures = {}

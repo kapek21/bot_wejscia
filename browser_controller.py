@@ -387,7 +387,14 @@ class BrowserController:
                     # Ignoruj błędy pojedynczych cookies
                     pass
             
-            self.logger.info(f"Demographic cookies set (age: 19-50, region: {self.wojewodztwo})")
+            # Znajdź płeć z cookies
+            gender = "M/K"
+            for cookie in cookies:
+                if cookie['name'] == 'user_gender':
+                    gender = cookie['value']
+                    break
+            
+            self.logger.info(f"Demographic cookies set (age: 19-50, region: {self.wojewodztwo}, gender: {gender})")
             
         except Exception as e:
             self.logger.warning(f"Error setting demographic cookies: {e}")
